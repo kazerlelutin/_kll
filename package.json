@@ -1,0 +1,28 @@
+{
+  "name": "kll",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:back": "nodemon index.js",
+    "dev:front": "vite",
+    "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\""
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@hapi/hapi": "^21.3.2",
+    "@hapi/inert": "^7.1.0",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.3.1",
+    "joi": "^17.11.0",
+    "knex": "^3.1.0",
+    "nodemon": "^3.0.2",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.7",
+    "uuid": "^9.0.1",
+    "vite": "^5.0.10"
+  }
+}
