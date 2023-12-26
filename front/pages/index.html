@@ -1,11 +1,9 @@
 <div>
-  <h1>Hello Vite!</h1>
-  <div _="on load template 'button' end" data-trans="OK" data-state="{Salut:'hey'}">mon bouton</div>
-  <div class="card">
-  </div>
-  <p class="read-the-docs">
-    Click on the Vite logo to learn more
-  </p>
-  <div _="on click log 'SALUT'"> SALUT</div>
-  <a _="on click navigate '/home' end">/HOME</a>
+  <h1>Hello KLL!</h1>
+
+  <div kll-t="button-count" kll-ctrl="buttonCount" kll-s-word="salut ceci vient d'une props" data-trans="test"
+    kll-id="my_button"></div>
+
+  <div kll-t="text-to-render" kll-b="truc.rien,my_button.count" kll-ctrl="textToRender"></div>
+
 </div>
