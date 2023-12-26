@@ -34,10 +34,13 @@ export function createComponent(templateName, ctrlName, id, stateAttrs = {}) {
 }
 
 export async function hydrate(tElement) {
+  cleanUpElement(tElement)
   const attrs = await processAttributes(tElement)
   const containerParent = document.createElement("div")
   containerParent.appendChild(attrs.template)
   const container = containerParent.firstElementChild
+
+  container._listeners = {}
 
   // Attache le state au container
   container.state = await handleInitState(attrs.state, container, attrs.ctrl?.render)
@@ -61,6 +64,14 @@ export async function hydrate(tElement) {
   //attache les méthodes du controller au container
   tElement.replaceWith(container)
   container?.onInit?.()
+}
+
+function cleanUpElement(element) {
+  if (!element?._listeners) return
+  Object.keys(element._listeners).forEach((k) => {
+    element.removeEventListener(k, element._listeners[k])
+  })
+  element._listeners = {}
 }
 
 export async function kllT() {
@@ -199,9 +210,16 @@ function handleAttachMethods(container, ctrl, state) {
   }
 
   for (const method of methods) {
-    container.addEventListener(method.slice(2).toLocaleLowerCase(), (e) =>
-      ctrl[method](state, e.target, e)
-    )
+    const methodType = method.slice(2).toLocaleLowerCase()
+    const helper = (e) => {
+      if (typeof ctrl[methodType] === "function") {
+        ctrl[methodType](state, e.target, e)
+      } else {
+        console.warn(`Method ${methodType} is not defined on the controller.`)
+      }
+    }
+    container._listeners[methodType] = helper
+    container.addEventListener(methodType, helper)
   }
 }
 
