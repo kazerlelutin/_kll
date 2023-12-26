@@ -13,32 +13,61 @@ function getState(id) {
   return el?.state || {}
 }
 
+export function createComponent(templateName, ctrlName, id, stateAttrs = {}) {
+  // Créer un nouvel élément
+  const newEl = document.createElement("div")
+
+  // Définir les attributs de base
+  newEl.setAttribute("kll-t", templateName)
+  newEl.setAttribute("kll-ctrl", ctrlName)
+  newEl.setAttribute("kll-id", id)
+
+  // Ajouter les attributs d'état (kll-s)
+  for (const [key, value] of Object.entries(stateAttrs)) {
+    newEl.setAttribute(`kll-s-${key}`, value)
+  }
+
+  // Hydrater le nouvel élément
+  hydrate(newEl)
+
+  return newEl
+}
+
+export async function hydrate(tElement) {
+  const attrs = await processAttributes(tElement)
+  const containerParent = document.createElement("div")
+  containerParent.appendChild(attrs.template)
+  const container = containerParent.firstElementChild
+
+  // Attache le state au container
+  container.state = await handleInitState(attrs.state, container, attrs.ctrl?.render)
+
+  // Attache les attributs au container
+  for (const attr in attrs.attrs) {
+    container.setAttribute(attr, attrs.attrs[attr])
+  }
+
+  container.kllId = attrs.kllId || `${tElement.getAttribute("kll-t")}_${new Date().getTime()}`
+  handleAttachMethods(container, attrs.ctrl, container.state)
+
+  // Helper pour récupérer le state d'un autre composant
+  container.getState = (id) => getState(id)
+
+  const slot = container.querySelector("slot")
+  if (slot) {
+    const children = tElement.firstElementChild
+    slot.replaceWith(children)
+  }
+  //attache les méthodes du controller au container
+  tElement.replaceWith(container)
+  container?.onInit?.()
+}
+
 export async function kllT() {
   const tEl = document.querySelectorAll("[kll-t]")
 
   for (const tElement of tEl) {
-    const attrs = await processAttributes(tElement)
-    const containerParent = document.createElement("div")
-    containerParent.appendChild(attrs.template)
-    const container = containerParent.firstElementChild
-
-    console.log(container)
-    // Attache le state au container
-    container.state = await handleInitState(attrs.state, container, attrs.ctrl?.render)
-
-    // Attache les attributs au container
-    for (const attr in attrs.attrs) {
-      container.setAttribute(attr, attrs.attrs[attr])
-    }
-
-    container.kllId = attrs.kllId || `${tElement.getAttribute("kll-t")}_${new Date().getTime()}`
-    handleAttachMethods(container, attrs.ctrl, container.state)
-
-    // Helper pour récupérer le state d'un autre composant
-    container.getState = (id) => getState(id)
-    //attache les méthodes du controller au container
-    tElement.replaceWith(container)
-    container?.onInit?.()
+    await hydrate(tElement)
   }
 }
 
@@ -50,18 +79,18 @@ async function handleInitState(state, container, render) {
     set: (target, key, value) => {
       const result = Reflect.set(target, key, value)
       if (dependencies && dependencies.has(key)) {
-        container.render()
+        container.render(key, value)
       }
-      handleTriggerState(key, container.kllId)
+      handleTriggerState(key, value, container.kllId)
       return result
     },
   })
 }
 
-async function handleTriggerState(key, name) {
+async function handleTriggerState(key, value, name) {
   const elements = document.querySelectorAll(`[kll-b*='${name}.${key}']`)
   for (const element of elements) {
-    element?.render?.()
+    element?.render?.({ key, value, name })
   }
 }
 
@@ -162,7 +191,7 @@ function handleAttachMethods(container, ctrl, state) {
     .filter((k) => !k.match(/state|oninit/i))
 
   if (ctrl.render) {
-    container.render = () => ctrl.render(state, container)
+    container.render = (proxy) => ctrl.render(state, container, proxy)
   }
 
   if (ctrl.onInit) {
