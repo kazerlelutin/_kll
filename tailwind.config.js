@@ -2,8 +2,8 @@
 module.exports = {
   content: [
     "./front/pages/*.html",
-    "./front/templates/*.html",
-    "./front/script/*.js",
+    "./front/templates/**/*.html",
+    "./front/ctrl/**/*.js",
     "./front/index.html",
     "./libs/*.js",
   ],

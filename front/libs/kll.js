@@ -58,7 +58,7 @@ export async function hydrate(tElement) {
 
   const slot = container.querySelector("slot")
   if (slot) {
-    const children = tElement.firstElementChild
+    const children = tElement.firstElementChild || tElement.firstChild
     slot.replaceWith(children)
   }
   //attache les méthodes du controller au container
@@ -165,14 +165,19 @@ async function processAttributes(tElement) {
 async function handleTemplate(templateName) {
   let raw = null
   try {
-    raw = await import(`../templates/${templateName}.html?raw`)
+    const nameAndfolder = templateName.replace(".", "/")
+    const path = nameAndfolder.startsWith("/") ? nameAndfolder.slice(1) : nameAndfolder
+    const completePath = `../templates/${path}.html?raw`
+    raw = await import(completePath)
   } catch (e) {
     throw new Error(`Template ${templateName} not found`)
   }
   const el = document.createElement("div")
   el.innerHTML = raw.default
 
-  const template = el.querySelector(`#${templateName}`).content
+  const name = templateName.split(".").pop()
+
+  const template = el.querySelector(`#${name}`).content
   const componentInstance = document.importNode(template, true)
   const container = document.createElement("div")
   container.appendChild(componentInstance)
@@ -183,17 +188,24 @@ async function handleTemplate(templateName) {
 async function handleControllerAttribute(attrValue) {
   let ctrlImp = null
 
+  const name = attrValue.split(".").pop()
+
   try {
-    ctrlImp = await import(`../ctrl/${attrValue}.js`)
+    const nameAndfolder = attrValue.replace(".", "/")
+    const path = nameAndfolder.startsWith("/") ? nameAndfolder.slice(1) : nameAndfolder
+
+    const completePath = `../ctrl/${path}.js`
+
+    ctrlImp = await import(completePath)
   } catch (e) {
     throw new Error(`Controller ${attrValue} not found`)
   }
 
-  if (!ctrlImp.default && !ctrlImp[attrValue]) {
+  if (!ctrlImp.default && !ctrlImp[name]) {
     throw new Error(`Controller ${attrValue} not found`)
   }
 
-  return ctrlImp.default || ctrlImp[attrValue]
+  return ctrlImp.default || ctrlImp[name]
 }
 
 function handleAttachMethods(container, ctrl, state) {
@@ -211,9 +223,10 @@ function handleAttachMethods(container, ctrl, state) {
 
   for (const method of methods) {
     const methodType = method.slice(2).toLocaleLowerCase()
+
     const helper = (e) => {
-      if (typeof ctrl[methodType] === "function") {
-        ctrl[methodType](state, e.target, e)
+      if (typeof ctrl[method] === "function") {
+        ctrl[method](state, e.target, e)
       } else {
         console.warn(`Method ${methodType} is not defined on the controller.`)
       }
